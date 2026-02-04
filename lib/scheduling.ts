@@ -55,29 +55,34 @@ export function intersectIntervals(a: Interval[], b: Interval[]): Interval[] {
   return result;
 }
 
-// Specific time slots: Friday 5pm, Saturday 10am, Saturday 5pm
-const ALLOWED_SLOTS = [
-  { dayOfWeek: 5, hour: 17 }, // Friday 5pm
-  { dayOfWeek: 6, hour: 10 }, // Saturday 10am
-  { dayOfWeek: 6, hour: 17 }, // Saturday 5pm
+// Specific time windows with their full durations
+// Friday 5-8pm (3 hours), Saturday 10am-12pm (2 hours), Saturday 5-8pm (3 hours)
+const ALLOWED_WINDOWS = [
+  { dayOfWeek: 5, startHour: 17, endHour: 20, label: 'Friday 5-8pm' },    // Friday 5pm-8pm
+  { dayOfWeek: 6, startHour: 10, endHour: 12, label: 'Saturday 10am-12pm' }, // Saturday 10am-12pm
+  { dayOfWeek: 6, startHour: 17, endHour: 20, label: 'Saturday 5-8pm' },  // Saturday 5pm-8pm
 ];
 
 export function generateSlots(
   freeIntervals: Interval[],
-  durationMinutes: number,
+  _durationMinutes: number,
   _stepMinutes = 30,
   options?: { timezone?: string }
 ) {
   const timezone = options?.timezone ?? 'America/Los_Angeles';
-  const durationMs = durationMinutes * 60 * 1000;
   const slots: { start: Date; end: Date }[] = [];
   
   // Generate all possible slots for the date range
-  if (freeIntervals.length === 0) return slots;
+  if (freeIntervals.length === 0) {
+    console.log('[Scheduling] No free intervals provided');
+    return slots;
+  }
   
   // Find the overall date range from free intervals
   const minDate = new Date(Math.min(...freeIntervals.map(i => i.start.getTime())));
   const maxDate = new Date(Math.max(...freeIntervals.map(i => i.end.getTime())));
+  
+  console.log(`[Scheduling] Checking windows from ${minDate.toISOString()} to ${maxDate.toISOString()}`);
   
   // Iterate through each day in the range
   const cursor = new Date(minDate);
@@ -86,20 +91,22 @@ export function generateSlots(
   while (cursor <= maxDate) {
     const dayOfWeek = getDayOfWeekInTimezone(cursor, timezone);
     
-    // Check each allowed slot for this day
-    for (const slotDef of ALLOWED_SLOTS) {
-      if (dayOfWeek === slotDef.dayOfWeek) {
-        // Create the slot time in the target timezone
-        const slotStart = createDateInTimezone(cursor, slotDef.hour, 0, timezone);
-        const slotEnd = new Date(slotStart.getTime() + durationMs);
+    // Check each allowed window for this day
+    for (const windowDef of ALLOWED_WINDOWS) {
+      if (dayOfWeek === windowDef.dayOfWeek) {
+        // Create the full window time in the target timezone
+        const windowStart = createDateInTimezone(cursor, windowDef.startHour, 0, timezone);
+        const windowEnd = createDateInTimezone(cursor, windowDef.endHour, 0, timezone);
         
-        // Check if this slot falls within any free interval
+        // Check if the ENTIRE window is free (no overlap with any busy time)
         const isAvailable = freeIntervals.some(interval => 
-          slotStart >= interval.start && slotEnd <= interval.end
+          windowStart >= interval.start && windowEnd <= interval.end
         );
         
+        console.log(`[Scheduling] ${windowDef.label} on ${cursor.toDateString()}: ${windowStart.toISOString()} - ${windowEnd.toISOString()} = ${isAvailable ? 'AVAILABLE' : 'BUSY'}`);
+        
         if (isAvailable) {
-          slots.push({ start: slotStart, end: slotEnd });
+          slots.push({ start: windowStart, end: windowEnd });
         }
       }
     }
@@ -108,6 +115,7 @@ export function generateSlots(
     cursor.setDate(cursor.getDate() + 1);
   }
   
+  console.log(`[Scheduling] Found ${slots.length} available windows`);
   return slots;
 }
 

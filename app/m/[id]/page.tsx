@@ -19,17 +19,28 @@ type Slot = {
   end: string;
 };
 
-function formatSlot(isoString: string, timezone: string): string {
-  const date = new Date(isoString);
-  const options: Intl.DateTimeFormatOptions = {
+function formatSlot(startIso: string, endIso: string, timezone: string): string {
+  const startDate = new Date(startIso);
+  const endDate = new Date(endIso);
+  
+  const dateOptions: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
+    timeZone: timezone,
+  };
+  
+  const timeOptions: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     hour12: true,
     timeZone: timezone,
   };
-  return date.toLocaleString('en-US', options).replace(',', '') + ' PT';
+  
+  const dateStr = startDate.toLocaleString('en-US', dateOptions);
+  const startTime = startDate.toLocaleString('en-US', timeOptions).toLowerCase();
+  const endTime = endDate.toLocaleString('en-US', timeOptions).toLowerCase();
+  
+  return `${dateStr}, ${startTime} - ${endTime} PT`;
 }
 
 export default function MeetingPage() {
@@ -146,7 +157,7 @@ export default function MeetingPage() {
           <h2>Available times</h2>
           {slots.map((slot) => (
             <div key={`${slot.start}-${slot.end}`} className="slot">
-              {formatSlot(slot.start, meeting?.timezone || 'America/Los_Angeles')}
+              {formatSlot(slot.start, slot.end, meeting?.timezone || 'America/Los_Angeles')}
             </div>
           ))}
         </div>

@@ -42,7 +42,11 @@ export async function fetchFreeBusy(userId: string, timeMin: string, timeMax: st
     return null;
   }
 
-  console.log(`[FreeBusy] Fetching for user ${userId}, range: ${timeMin} to ${timeMax}`);
+  // Ensure we're using proper ISO strings
+  const timeMinISO = new Date(timeMin).toISOString();
+  const timeMaxISO = new Date(timeMax).toISOString();
+
+  console.log(`[FreeBusy] Fetching for user ${userId}, range: ${timeMinISO} to ${timeMaxISO}`);
 
   const res = await fetch(GOOGLE_FREEBUSY_URL, {
     method: 'POST',
@@ -51,10 +55,12 @@ export async function fetchFreeBusy(userId: string, timeMin: string, timeMax: st
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      timeMin,
-      timeMax,
+      timeMin: timeMinISO,
+      timeMax: timeMaxISO,
       items: [{ id: 'primary' }]
-    })
+    }),
+    // Disable caching to always get fresh data
+    cache: 'no-store'
   });
 
   if (!res.ok) {
@@ -64,8 +70,22 @@ export async function fetchFreeBusy(userId: string, timeMin: string, timeMax: st
   }
 
   const data = await res.json();
+  
+  // Check for errors in the response
+  if (data?.calendars?.primary?.errors) {
+    console.log(`[FreeBusy] Calendar errors for user ${userId}:`, data.calendars.primary.errors);
+    return null;
+  }
+  
   const busy = data?.calendars?.primary?.busy as { start: string; end: string }[] | undefined;
-  console.log(`[FreeBusy] User ${userId} has ${busy?.length ?? 0} busy blocks`);
+  
+  // Log each busy block for debugging
+  console.log(`[FreeBusy] User ${userId} has ${busy?.length ?? 0} busy blocks:`);
+  if (busy && busy.length > 0) {
+    busy.forEach((block, i) => {
+      console.log(`[FreeBusy]   ${i + 1}. ${block.start} to ${block.end}`);
+    });
+  }
   
   return busy ?? [];
 }
