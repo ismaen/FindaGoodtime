@@ -72,11 +72,16 @@ export async function upsertUser(email: string, name?: string | null) {
 
 export async function linkParticipantByEmail(email: string, userId: string) {
   await initDb();
-  await sql`
+  const lowerEmail = email.toLowerCase();
+  console.log(`[DB] Linking participant ${lowerEmail} to user ${userId}`);
+  
+  const result = await sql`
     UPDATE meeting_participants 
     SET user_id = ${userId}, status = 'connected' 
-    WHERE email = ${email}
+    WHERE LOWER(email) = ${lowerEmail}
   `;
+  
+  console.log(`[DB] Updated ${result.rowCount} participant rows for ${lowerEmail}`);
 }
 
 export async function upsertCalendarConnection(
@@ -181,6 +186,8 @@ export async function getMeetingParticipants(id: string) {
     WHERE meeting_id = ${id} 
     ORDER BY email
   `;
+  
+  console.log(`[DB] getMeetingParticipants for ${id}:`, result.rows);
   
   return result.rows.map(row => ({
     email: row.email as string,
