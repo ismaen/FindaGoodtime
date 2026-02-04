@@ -19,18 +19,17 @@ type Slot = {
   end: string;
 };
 
-function formatDateTime(isoString: string, timezone: string): string {
+function formatSlot(isoString: string, timezone: string): string {
   const date = new Date(isoString);
   const options: Intl.DateTimeFormatOptions = {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    hour12: true,
     timeZone: timezone,
   };
-  return date.toLocaleString('en-US', options).replace(',', '');
+  return date.toLocaleString('en-US', options).replace(',', '') + ' PT';
 }
 
 export default function MeetingPage() {
@@ -101,9 +100,7 @@ export default function MeetingPage() {
     <div className="card">
       <h1>{meeting?.title || 'Meeting'}</h1>
       <p>
-        Duration: {meeting?.durationMinutes ?? '-'} minutes<br />
-        Window: {meeting ? formatDateTime(meeting.startRange, meeting.timezone) : '-'} → {meeting ? formatDateTime(meeting.endRange, meeting.timezone) : '-'}<br />
-        Timezone: {meeting?.timezone ?? '-'}
+        Finding available Fridays @ 5pm and Saturdays @ 10am or 5pm (Pacific Time) for the next 3 months.
       </p>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -118,7 +115,7 @@ export default function MeetingPage() {
       </div>
 
       <div className="notice">
-        Participants need to connect Google Calendar before we can compute a fully automated suggestion set.
+        All participants need to connect their Google Calendar so we can find times that work for everyone.
       </div>
 
       <button onClick={fetchSuggestions} disabled={loading}>
@@ -138,10 +135,10 @@ export default function MeetingPage() {
 
       {slots.length > 0 ? (
         <div style={{ marginTop: 18 }}>
-          <h2>Top suggested slots</h2>
+          <h2>Available times</h2>
           {slots.map((slot) => (
             <div key={`${slot.start}-${slot.end}`} className="slot">
-              {formatDateTime(slot.start, meeting?.timezone || 'America/Los_Angeles')} → {formatDateTime(slot.end, meeting?.timezone || 'America/Los_Angeles')}
+              {formatSlot(slot.start, meeting?.timezone || 'America/Los_Angeles')}
             </div>
           ))}
         </div>

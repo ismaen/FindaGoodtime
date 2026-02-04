@@ -23,7 +23,7 @@ export default function Home() {
 
     const payload = {
       title: String(formData.get('title') || 'Meeting'),
-      durationMinutes: Number(formData.get('durationMinutes') || 30),
+      durationMinutes: 60, // Fixed duration for the time slots
       startRange: now.toISOString(),
       endRange: threeMonthsLater.toISOString(),
       timezone: 'America/Los_Angeles',
@@ -59,10 +59,7 @@ export default function Home() {
         <p>Create a meeting, invite people by email, and let calendars do the math.</p>
         <form onSubmit={handleSubmit}>
           <label htmlFor="title">Meeting title</label>
-          <input id="title" name="title" placeholder="Weekly sync" />
-
-          <label htmlFor="durationMinutes">Duration (minutes)</label>
-          <input id="durationMinutes" name="durationMinutes" type="number" defaultValue={30} />
+          <input id="title" name="title" placeholder="Game night" />
 
           <label htmlFor="participantEmails">Participant emails (comma separated)</label>
           <textarea id="participantEmails" name="participantEmails" rows={3} placeholder="alex@company.com, jamie@company.com" />
@@ -76,14 +73,16 @@ export default function Home() {
       <section className="card">
         <h2>What happens next</h2>
         <p>
-          Each participant connects Google Calendar and we pull only free/busy blocks.
-          The app finds the best Friday or Saturday that works for everyone in the next 3 months.
+          Each participant connects Google Calendar and we check availability for these time slots over the next 3 months:
         </p>
-        <div>
-          <span className="badge">Google Calendar only</span>
-          <span className="badge">No event write-back</span>
-          <span className="badge">Free/busy only</span>
+        <div style={{ marginBottom: 12 }}>
+          <span className="badge">Fridays @ 5pm</span>
+          <span className="badge">Saturdays @ 10am</span>
+          <span className="badge">Saturdays @ 5pm</span>
         </div>
+        <p style={{ fontSize: '0.9em', opacity: 0.8 }}>
+          All times in Pacific Time (PT)
+        </p>
       </section>
     </div>
   );

@@ -55,38 +55,59 @@ export function intersectIntervals(a: Interval[], b: Interval[]): Interval[] {
   return result;
 }
 
-export function generateSlots(
-  intervals: Interval[],
-  durationMinutes: number,
-  stepMinutes = 30,
-  options?: { timezone?: string; allowedDays?: number[] }
-) {
-  const slots: { start: Date; end: Date }[] = [];
-  const durationMs = durationMinutes * 60 * 1000;
-  const stepMs = stepMinutes * 60 * 1000;
-  
-  // Default to Friday (5) and Saturday (6) only
-  const allowedDays = options?.allowedDays ?? [5, 6];
-  const timezone = options?.timezone ?? 'America/Los_Angeles';
+// Specific time slots: Friday 5pm, Saturday 10am, Saturday 5pm
+const ALLOWED_SLOTS = [
+  { dayOfWeek: 5, hour: 17 }, // Friday 5pm
+  { dayOfWeek: 6, hour: 10 }, // Saturday 10am
+  { dayOfWeek: 6, hour: 17 }, // Saturday 5pm
+];
 
-  for (const interval of intervals) {
-    let cursor = interval.start.getTime();
-    const end = interval.end.getTime();
-    while (cursor + durationMs <= end) {
-      const slotStart = new Date(cursor);
-      const slotEnd = new Date(cursor + durationMs);
-      
-      // Get the day of week in the specified timezone
-      const dayOfWeek = getDayOfWeekInTimezone(slotStart, timezone);
-      
-      // Only include slots on allowed days (Friday = 5, Saturday = 6)
-      if (allowedDays.includes(dayOfWeek)) {
-        slots.push({ start: slotStart, end: slotEnd });
+export function generateSlots(
+  freeIntervals: Interval[],
+  durationMinutes: number,
+  _stepMinutes = 30,
+  options?: { timezone?: string }
+) {
+  const timezone = options?.timezone ?? 'America/Los_Angeles';
+  const durationMs = durationMinutes * 60 * 1000;
+  const slots: { start: Date; end: Date }[] = [];
+  
+  // Generate all possible slots for the date range
+  if (freeIntervals.length === 0) return slots;
+  
+  // Find the overall date range from free intervals
+  const minDate = new Date(Math.min(...freeIntervals.map(i => i.start.getTime())));
+  const maxDate = new Date(Math.max(...freeIntervals.map(i => i.end.getTime())));
+  
+  // Iterate through each day in the range
+  const cursor = new Date(minDate);
+  cursor.setHours(0, 0, 0, 0);
+  
+  while (cursor <= maxDate) {
+    const dayOfWeek = getDayOfWeekInTimezone(cursor, timezone);
+    
+    // Check each allowed slot for this day
+    for (const slotDef of ALLOWED_SLOTS) {
+      if (dayOfWeek === slotDef.dayOfWeek) {
+        // Create the slot time in the target timezone
+        const slotStart = createDateInTimezone(cursor, slotDef.hour, 0, timezone);
+        const slotEnd = new Date(slotStart.getTime() + durationMs);
+        
+        // Check if this slot falls within any free interval
+        const isAvailable = freeIntervals.some(interval => 
+          slotStart >= interval.start && slotEnd <= interval.end
+        );
+        
+        if (isAvailable) {
+          slots.push({ start: slotStart, end: slotEnd });
+        }
       }
-      
-      cursor += stepMs;
     }
+    
+    // Move to next day
+    cursor.setDate(cursor.getDate() + 1);
   }
+  
   return slots;
 }
 
@@ -101,4 +122,30 @@ function getDayOfWeekInTimezone(date: Date, timezone: string): number {
     'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
   };
   return dayMap[dayStr] ?? 0;
+}
+
+// Helper to create a date at a specific hour in a timezone
+function createDateInTimezone(baseDate: Date, hour: number, minute: number, timezone: string): Date {
+  // Get the date parts in the target timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: timezone,
+  });
+  const parts = formatter.format(baseDate).split('/');
+  const month = parseInt(parts[0], 10);
+  const day = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
+  
+  // Create a date string and parse it as if in the target timezone
+  // This is a simplification - we create the date and adjust for timezone offset
+  const targetDate = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+  
+  // Get timezone offset for this date in the target timezone
+  const utcDate = new Date(targetDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const tzDate = new Date(targetDate.toLocaleString('en-US', { timeZone: timezone }));
+  const offset = utcDate.getTime() - tzDate.getTime();
+  
+  return new Date(targetDate.getTime() + offset);
 }
