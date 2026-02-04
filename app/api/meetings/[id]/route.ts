@@ -32,8 +32,11 @@ export async function POST(_request: Request, context: { params: { id: string } 
   }
 
   // Link the participant
+  console.log(`[Meeting] Linking participant ${session.user.email} to meeting ${context.params.id}`);
   const userId = await upsertUser(session.user.email, session.user.name);
+  console.log(`[Meeting] User ID for ${session.user.email}: ${userId}`);
   await linkParticipantByEmail(session.user.email, userId);
+  console.log(`[Meeting] Successfully linked ${session.user.email}`);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, userId });
 }

@@ -16,12 +16,19 @@ export async function GET(_request: Request, context: { params: { id: string } }
   const end = new Date(meeting.endRange);
 
   for (const participant of participants) {
+    console.log(`[Suggestions] Checking participant: ${participant.email}, user_id: ${participant.user_id}, status: ${participant.status}`);
+    
     if (!participant.user_id) {
+      console.log(`[Suggestions] ${participant.email} has no user_id, adding to missing`);
       missing.push(participant.email);
       continue;
     }
+    
     const connection = await getCalendarConnectionByUserId(participant.user_id);
+    console.log(`[Suggestions] ${participant.email} calendar connection:`, connection ? 'EXISTS' : 'NONE');
+    
     if (!connection) {
+      console.log(`[Suggestions] ${participant.email} has no calendar connection, adding to missing`);
       missing.push(participant.email);
       continue;
     }
