@@ -52,7 +52,6 @@ export async function GET(_request: Request, context: { params: { id: string } }
 
   const slots = generateSlots(intersection, meeting.durationMinutes, 30, {
     timezone: meeting.timezone,
-    allowedDays: [5, 6], // Friday and Saturday only
   }).slice(0, 10);
   return NextResponse.json({
     slots: slots.map((slot) => ({
