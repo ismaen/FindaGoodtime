@@ -84,6 +84,10 @@ export default function Home() {
           All times in Pacific Time (PT)
         </p>
       </section>
+
+      <footer style={{ textAlign: 'center', padding: '24px 0', opacity: 0.7, fontSize: '0.9em' }}>
+        <a href="/privacy">Privacy Policy</a>
+      </footer>
     </div>
   );
 }
