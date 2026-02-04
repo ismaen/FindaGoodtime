@@ -37,7 +37,12 @@ export async function getAccessToken(userId: string) {
 
 export async function fetchFreeBusy(userId: string, timeMin: string, timeMax: string) {
   const accessToken = await getAccessToken(userId);
-  if (!accessToken) return null;
+  if (!accessToken) {
+    console.log(`[FreeBusy] No access token for user ${userId}`);
+    return null;
+  }
+
+  console.log(`[FreeBusy] Fetching for user ${userId}, range: ${timeMin} to ${timeMax}`);
 
   const res = await fetch(GOOGLE_FREEBUSY_URL, {
     method: 'POST',
@@ -53,9 +58,14 @@ export async function fetchFreeBusy(userId: string, timeMin: string, timeMax: st
   });
 
   if (!res.ok) {
+    const errorText = await res.text();
+    console.log(`[FreeBusy] API error for user ${userId}: ${res.status} ${errorText}`);
     return null;
   }
 
   const data = await res.json();
-  return data?.calendars?.primary?.busy as { start: string; end: string }[];
+  const busy = data?.calendars?.primary?.busy as { start: string; end: string }[] | undefined;
+  console.log(`[FreeBusy] User ${userId} has ${busy?.length ?? 0} busy blocks`);
+  
+  return busy ?? [];
 }

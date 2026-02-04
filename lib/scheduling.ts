@@ -138,14 +138,28 @@ function createDateInTimezone(baseDate: Date, hour: number, minute: number, time
   const day = parseInt(parts[1], 10);
   const year = parseInt(parts[2], 10);
   
-  // Create a date string and parse it as if in the target timezone
-  // This is a simplification - we create the date and adjust for timezone offset
-  const targetDate = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+  // Create a reference date at noon UTC on this day to get the timezone offset
+  const refDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const offsetMinutes = getTimezoneOffset(refDate, timezone);
   
-  // Get timezone offset for this date in the target timezone
-  const utcDate = new Date(targetDate.toLocaleString('en-US', { timeZone: 'UTC' }));
-  const tzDate = new Date(targetDate.toLocaleString('en-US', { timeZone: timezone }));
-  const offset = utcDate.getTime() - tzDate.getTime();
+  // Create the local time we want, then convert to UTC
+  // offsetMinutes is positive for timezones behind UTC (like Pacific)
+  // So if we want 5pm Pacific (UTC-8), offset is 480 minutes
+  // UTC time = local time + offset = 17:00 + 8:00 = 25:00 = 01:00 next day
+  const localTimeMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const utcTimeMs = localTimeMs + (offsetMinutes * 60 * 1000);
   
-  return new Date(targetDate.getTime() + offset);
+  return new Date(utcTimeMs);
+}
+
+// Get timezone offset in minutes for a given date and timezone
+// Returns positive for timezones behind UTC (e.g., Pacific = +480)
+function getTimezoneOffset(date: Date, timezone: string): number {
+  const utcString = date.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzString = date.toLocaleString('en-US', { timeZone: timezone });
+  
+  const utcDate = new Date(utcString);
+  const tzDate = new Date(tzString);
+  
+  return (utcDate.getTime() - tzDate.getTime()) / (1000 * 60);
 }

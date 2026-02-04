@@ -27,13 +27,20 @@ export async function GET(_request: Request, context: { params: { id: string } }
     }
 
     const busy = await fetchFreeBusy(participant.user_id, meeting.startRange, meeting.endRange);
+    console.log(`[Suggestions] Participant ${participant.email} busy times:`, busy);
+    
     if (!busy) {
+      console.log(`[Suggestions] No busy data for ${participant.email}, adding to missing`);
       missing.push(participant.email);
       continue;
     }
 
     const busyIntervals = busy.map((b) => ({ start: new Date(b.start), end: new Date(b.end) }));
+    console.log(`[Suggestions] ${participant.email} has ${busyIntervals.length} busy intervals`);
+    
     const freeIntervals = invertBusyToFree(busyIntervals, start, end);
+    console.log(`[Suggestions] ${participant.email} has ${freeIntervals.length} free intervals`);
+    
     freeIntervalsPerUser.push(freeIntervals);
   }
 
