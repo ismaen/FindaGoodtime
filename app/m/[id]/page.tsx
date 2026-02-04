@@ -81,6 +81,14 @@ export default function MeetingPage() {
     setLoading(true);
     setError('');
     try {
+      // Refresh meeting data first to get latest participant statuses
+      const meetingRes = await fetch(`/api/meetings/${meetingId}`);
+      if (meetingRes.ok) {
+        const meetingData = await meetingRes.json();
+        setMeeting(meetingData.meeting);
+      }
+
+      // Then fetch suggestions with fresh data
       const res = await fetch(`/api/meetings/${meetingId}/suggestions`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
